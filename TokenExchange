@@ -1,0 +1,103 @@
+pragma solidity ^0.4.11;
+
+import "./ERCToken.sol";
+
+contract TokenExchange {
+
+
+  struct SellOrder {
+    uint numTokens;
+    uint pricePerToken;
+  }
+
+  // Can be a seller or a buyer!
+  struct User {
+    mapping (address => uint) tokenBalance;
+    mapping (address => SellOrder) tokensForSale;
+    uint etherBalance;
+  }
+
+  mapping (address => User) users;
+
+
+
+  //@dev Allows anyone to transfer previously-approved tokens to this exchange.
+	//@param _token Token address where approve(exchangeAddress, _amount) was called
+	//@param _amount Amount of tokens being deposited, that have already been approved in the token contract
+  function depositToken(address _token, uint _amount) public {
+    // Make sure they call approve in the other contract
+    ERCToken token = ERCToken (_token);
+    require((token).transferFrom(msg.sender, address(this), _amount));
+    users[msg.sender].tokenBalance[_token] += _amount;
+}
+
+
+  //@dev Allows anyone to sell token that they have already deposited in the exchange
+  //@param _token The token that has been previous deposited and is going to be sold
+  //@param _amount The number of _tokens being sold
+  //@param _costPerToken The cost, in Wei, per token being sold
+  function sellTokens(address _token, uint _amount, uint _costPerToken) public {
+    require(users[msg.sender].tokenBalance[_token] >= _amount);
+    users[msg.sender].tokensForSale[_token].numTokens += _amount;
+    users[msg.sender].tokensForSale[_token].pricePerToken = _costPerToken;
+  }
+
+
+  //@dev Allows someone to buy tokens from an someone who is selling them, for the specified price
+  //@param _seller Address of user to buy the tokens from
+  //@param _token Address of token to buy
+  //@param _amount The number of tokens to purchase.
+  function buyToken(address _seller, address _token, uint _amount) public payable {
+    uint tokensOwned = users[_seller].tokensForSale[_token].numTokens;
+    uint pricePerToken = users[_seller].tokensForSale[_token].pricePerToken;
+    uint valueOfTransaction = _amount * pricePerToken;
+    // require _seller has enough tokens
+    require(tokensOwned >= _amount);
+    // require msg.sender sent enough Eth
+    require(msg.value >= valueOfTransaction);
+    uint returnAsChange = (msg.value - valueOfTransaction);
+    users[_seller].etherBalance += valueOfTransaction;
+    users[_seller].tokenBalance[_token] -= _amount;
+    users[_seller].tokensForSale[_token].numTokens -= _amount;
+    users[msg.sender].tokenBalance[_token] += _amount;
+    users[msg.sender].etherBalance += returnAsChange;
+  }
+
+  //@dev Allows anyone to withdraw tokens this exchange holds on their behalf
+	//@param _token Address of token being withdrawn
+	//@param _amount Amount of tokens being withdrawn
+  function withdrawToken(address _token, uint _amount) public {
+    require (users[msg.sender].tokenBalance[_token] >= _amount);
+    // need to include an if statement that takes tokens out of tokensForSale if need be
+    users[msg.sender].tokenBalance[_token] -= _amount;
+    ERCToken token = ERCToken(_token);
+    require(token.transfer(msg.sender, _amount));
+  }
+
+  //@dev Allows anyone to withdraw any Ether held by this exchange on their behalf
+  function withdrawEther() public {
+    uint toWithdraw = users[msg.sender].etherBalance;
+    users[msg.sender].etherBalance = 0;
+    msg.sender.transfer(toWithdraw);
+  }
+
+
+  /*
+  *   Read functions
+  */
+
+  //Allows anyone to check a token balance of a specific user on the exchange.
+	//@param _owner Address of user to check balance of.
+	//@param _token Address of token to check balance of _owner for.
+	//@return Returns amount of _token held by the exchange on behalf of the _owner.
+  function getTokenBalance(address _owner, address _token) public returns (uint balance) {
+    return users[_owner].tokenBalance[_token];
+  }
+
+  //Allows anyone to check the ether balance of someone on this exchange.
+	//@param _owner Address of user to check balance of.
+	//@return Returns amount of ether held by this exchange on behalf of the user
+  function getEtherBalance(address _owner) public returns (uint balance) {
+    return users[_owner].etherBalance;
+  }
+}
