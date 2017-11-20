@@ -37,7 +37,9 @@ contract TokenExchange {
   //@param _amount The number of _tokens being sold
   //@param _costPerToken The cost, in Wei, per token being sold
   function sellTokens(address _token, uint _amount, uint _costPerToken) public {
-    require(users[msg.sender].tokenBalance[_token] >= _amount);
+    uint numTokens = users[msg.sender].tokenBalance[_token];
+    uint numTokensForSale = users[msg.sender].tokensForSale[_token].numTokens;
+    require((numTokens - numTokensForSale) >= _amount);
     users[msg.sender].tokensForSale[_token].numTokens += _amount;
     users[msg.sender].tokensForSale[_token].pricePerToken = _costPerToken;
   }
