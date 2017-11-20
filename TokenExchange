@@ -50,12 +50,12 @@ contract TokenExchange {
   function buyToken(address _seller, address _token, uint _amount) public payable {
     uint tokensOwned = users[_seller].tokensForSale[_token].numTokens;
     uint pricePerToken = users[_seller].tokensForSale[_token].pricePerToken;
-    uint valueOfTransaction = _amount * pricePerToken;
+    uint priceOfPurchase = _amount * pricePerToken;
     // require _seller has enough tokens
     require(tokensOwned >= _amount);
     // require msg.sender sent enough Eth
-    require(msg.value >= valueOfTransaction);
-    uint returnAsChange = (msg.value - valueOfTransaction);
+    require(msg.value >= priceOfPurchase);
+    uint returnAsChange = (msg.value - priceOfPurchase);
     users[_seller].etherBalance += valueOfTransaction;
     users[_seller].tokenBalance[_token] -= _amount;
     users[_seller].tokensForSale[_token].numTokens -= _amount;
