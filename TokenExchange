@@ -58,7 +58,7 @@ contract TokenExchange {
     // require msg.sender sent enough Eth
     require(msg.value >= priceOfPurchase);
     uint returnAsChange = (msg.value - priceOfPurchase);
-    users[_seller].etherBalance += valueOfTransaction;
+    users[_seller].etherBalance += priceOfPurchase;
     users[_seller].tokenBalance[_token] -= _amount;
     users[_seller].tokensForSale[_token].numTokens -= _amount;
     users[msg.sender].tokenBalance[_token] += _amount;
@@ -70,7 +70,14 @@ contract TokenExchange {
 	//@param _amount Amount of tokens being withdrawn
   function withdrawToken(address _token, uint _amount) public {
     require (users[msg.sender].tokenBalance[_token] >= _amount);
-    // need to include an if statement that takes tokens out of tokensForSale if need be
+    uint numTokens = users[msg.sender].tokenBalance[_token];
+    uint numTokensForSale = users[msg.sender].tokensForSale[_token].numTokens;
+    // if msg.sender doesn't have enough tokens that are not for sale
+    // remove the required number of tokens from his Sell Order
+    if ((numTokens - numTokensForSale) < _amount) {
+      uint sellTokensReduction = _amount - (numTokens - numTokensForSale);
+      users[msg.sender].tokensForSale[_token].numTokens -= sellTokensReduction;
+    }
     users[msg.sender].tokenBalance[_token] -= _amount;
     ERCToken token = ERCToken(_token);
     require(token.transfer(msg.sender, _amount));
