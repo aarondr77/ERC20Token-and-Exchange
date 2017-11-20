@@ -78,9 +78,8 @@ contract TokenExchange {
 
   //@dev Allows anyone to withdraw any Ether held by this exchange on their behalf
   function withdrawEther() public {
-    uint toWithdraw = users[msg.sender].etherBalance;
+    msg.sender.transfer(users[msg.sender].etherBalance);
     users[msg.sender].etherBalance = 0;
-    msg.sender.transfer(toWithdraw);
   }
 
 
